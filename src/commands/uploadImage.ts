@@ -4,19 +4,32 @@ import uploadToCloud from '../utils/cloudUpload';
 const handleUploadCommand = async (message:Message) => {
     if (message.author.bot) return;
 
-    const attachment = message.attachments.first();
-    if(!attachment || !attachment.contentType?.startsWith('image/')){
-        await message.reply('❌ Please upload a valid image with the `!upload` command.');
+    // To get only multiple image attatchments
+
+    const imageAttatchments = message.attachments.filter(
+        (attachment) => attachment.contentType?.startsWith('image/')
+    );
+
+    if (imageAttatchments.size==0){
+        await message.reply('Please upload one or more valid images with the `!upload` command.');
         return;
     }
 
     try{
-        const imageUrl = attachment.url;
-        const uploadUrl = await uploadToCloud(imageUrl);
-        await message.reply(`✅ Image uploaded successfully: ${uploadedUrl}`);
-    } catch(err){
+        // upload all the images
+        const uploadPromises = imageAttatchments.map(async (attachment) =>{
+            return await uploadToCloud(attachment.url);
+        });
+    
+        const uploadedUrls = await Promise.all(uploadPromises);
+
+        const response = `${uploadedUrls.length} image(s) uploaded successfully:\n` +
+        uploadedUrls.map((url) => `${url}`).join('\n');
+
+        await message.reply(response);
+    }catch (err){
         console.error(err);
-        await message.reply('⚠️ Upload failed. Try again later.');
+        await message.reply('One or more uploads failed. Try again later.');
     }
 };
 
